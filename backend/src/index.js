@@ -18,6 +18,22 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Internal server error.' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend listening on http://localhost:${PORT}`);
-});
+// On Windows, a restarted dev server can briefly see EADDRINUSE because the
+// OS hasn't released the previous process's socket yet. Retry instead of crashing.
+function startServer(retriesLeft = 5) {
+  const server = app.listen(PORT, () => {
+    console.log(`Backend listening on http://localhost:${PORT}`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE' && retriesLeft > 0) {
+      console.warn(`Port ${PORT} is still in use, retrying in 1s... (${retriesLeft} attempts left)`);
+      setTimeout(() => startServer(retriesLeft - 1), 1000);
+    } else {
+      console.error(err);
+      process.exit(1);
+    }
+  });
+}
+
+startServer();

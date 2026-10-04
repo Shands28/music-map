@@ -124,13 +124,15 @@ export default {
         const channelTitle = snippet.videoOwnerChannelTitle || snippet.channelTitle;
         const videoId = snippet.resourceId?.videoId;
 
-        const { artistName } = parseArtistFromVideo({ videoTitle, channelTitle });
+        const { artistName, confidence } = parseArtistFromVideo({ videoTitle, channelTitle });
 
         tracks.push({
           title: videoTitle,
           artistName,
           sourceId: videoId,
           sourceUrl: videoId ? `https://www.youtube.com/watch?v=${videoId}` : null,
+          confidence,
+          channelTitle,
         });
       }
       pageToken = page.nextPageToken;

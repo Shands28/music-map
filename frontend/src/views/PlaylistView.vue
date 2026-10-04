@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import ProviderSelector from '../components/ProviderSelector.vue'
 import WorldMap from '../components/WorldMap.vue'
+import TrackList from '../components/TrackList.vue'
 
 const provider = ref('youtube')
 const playlistRef = ref('')
@@ -36,49 +37,68 @@ async function submit() {
 
 <template>
   <main class="playlist-view">
-    <h1>World Music Map</h1>
-    <p class="subtitle">See where the artists in your playlist come from.</p>
+    <section class="header">
+      <h1>World Music Map</h1>
+      <p class="subtitle">Descubre de dónde son los artistas de tu playlist.</p>
 
-    <form class="controls" @submit.prevent="submit">
-      <ProviderSelector v-model="provider" />
-      <input
-        v-model="playlistRef"
-        type="text"
-        placeholder="Playlist URL or ID"
-        class="playlist-input"
-      />
-      <button type="submit" :disabled="loading">
-        {{ loading ? 'Loading…' : 'Map it' }}
-      </button>
-    </form>
+      <form class="controls" @submit.prevent="submit">
+        <ProviderSelector v-model="provider" />
+        <input
+          v-model="playlistRef"
+          type="text"
+          placeholder="URL o ID de la playlist"
+          class="playlist-input"
+        />
+        <button type="submit" class="primary-button" :disabled="loading">
+          {{ loading ? 'Cargando…' : 'Mapear' }}
+        </button>
+      </form>
 
-    <p v-if="loading" class="status">
-      Resolving artist countries via MusicBrainz, this can take a while (rate-limited)…
-    </p>
-    <p v-if="error" class="status error">{{ error }}</p>
+      <p v-if="loading" class="status">
+        Resolviendo países de los artistas vía MusicBrainz, esto puede tardar (hay límite de 1 petición/segundo)…
+      </p>
+      <p v-if="error" class="status error">{{ error }}</p>
+    </section>
 
-    <template v-if="result">
+    <section v-if="result" class="map-section">
       <WorldMap :countries="result.countries" />
+    </section>
+
+    <section v-if="result" class="results">
       <p class="summary">
-        {{ result.total - result.unidentified }} of {{ result.total }} tracks placed on the map.
+        {{ result.total - result.unidentified }} de {{ result.total }} canciones ubicadas en el mapa.
         <span v-if="result.unidentified > 0">
-          {{ result.unidentified }} track(s) could not be identified or had no known country.
+          {{ result.unidentified }} canción(es) no se pudieron identificar o no tienen país conocido.
         </span>
       </p>
-    </template>
+      <TrackList :tracks="result.tracks" />
+    </section>
   </main>
 </template>
 
 <style scoped>
 .playlist-view {
-  max-width: 960px;
+  padding-bottom: 3rem;
+}
+
+.header,
+.results {
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 0 1.5rem;
+}
+
+.header {
+  padding-top: 2rem;
+}
+
+h1 {
+  font-size: 2rem;
+  margin: 0 0 0.25rem;
 }
 
 .subtitle {
-  color: #666;
-  margin-top: -0.5rem;
+  color: var(--text-muted);
 }
 
 .controls {
@@ -86,26 +106,62 @@ async function submit() {
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
-  margin: 1.5rem 0;
+  margin: 1.5rem 0 1rem;
 }
 
 .playlist-input {
   flex: 1;
   min-width: 240px;
-  padding: 0.5rem 0.75rem;
+  padding: 0.6rem 0.9rem;
   font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.playlist-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.primary-button {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1.3rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .status {
-  color: #666;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
 }
 
 .status.error {
-  color: #c0392b;
+  color: var(--error-text);
+}
+
+.map-section {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  padding: 1.5rem;
+  box-sizing: border-box;
 }
 
 .summary {
-  margin-top: 1rem;
-  color: #444;
+  color: var(--text);
+  margin-bottom: 0.5rem;
 }
 </style>

@@ -1,9 +1,15 @@
+function normalizeArtist(artistName) {
+  return artistName.trim().toLowerCase();
+}
+
 /**
- * Groups resolved tracks by country and counts unidentified/no-country tracks.
+ * Groups resolved tracks by country, counting each distinct artist once per
+ * country (so three tracks by the same artist don't inflate that country's
+ * count to 3). Also counts unidentified/no-country tracks.
  * @param {{ artistName: string|null, country: string|null }[]} resolvedTracks
  */
 export function aggregateByCountry(resolvedTracks) {
-  const countryCounts = {};
+  const artistsByCountry = new Map();
   let unidentified = 0;
 
   for (const track of resolvedTracks) {
@@ -11,11 +17,19 @@ export function aggregateByCountry(resolvedTracks) {
       unidentified += 1;
       continue;
     }
-    countryCounts[track.country] = (countryCounts[track.country] || 0) + 1;
+    if (!artistsByCountry.has(track.country)) {
+      artistsByCountry.set(track.country, new Set());
+    }
+    artistsByCountry.get(track.country).add(normalizeArtist(track.artistName));
   }
 
+  const countries = [...artistsByCountry.entries()].map(([country, artists]) => ({
+    country,
+    count: artists.size,
+  }));
+
   return {
-    countries: Object.entries(countryCounts).map(([country, count]) => ({ country, count })),
+    countries,
     unidentified,
     total: resolvedTracks.length,
   };

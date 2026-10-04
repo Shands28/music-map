@@ -25,7 +25,12 @@ router.get('/countries', async (req, res) => {
     const uniqueArtists = [...new Set(tracks.filter((t) => t.artistName).map((t) => t.artistName))];
     const artistCountries = {};
     for (const artistName of uniqueArtists) {
-      artistCountries[artistName] = await getArtistCountry(artistName);
+      try {
+        artistCountries[artistName] = await getArtistCountry(artistName);
+      } catch (err) {
+        console.error(`MusicBrainz lookup failed for "${artistName}":`, err.message);
+        artistCountries[artistName] = null;
+      }
     }
 
     const resolvedTracks = tracks.map((track) => ({
@@ -47,6 +52,7 @@ router.get('/countries', async (req, res) => {
     if (err.code === 'PLAYLIST_NOT_FOUND') {
       return res.status(404).json({ error: 'Playlist not found or is private.' });
     }
+    console.error('Unexpected error resolving playlist countries:', err);
     return res.status(500).json({ error: err.message });
   }
 });

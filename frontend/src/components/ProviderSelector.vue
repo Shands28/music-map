@@ -24,7 +24,7 @@ const providers = [
         @change="emit('update:modelValue', provider.id)"
       />
       {{ provider.label }}
-      <span v-if="!provider.enabled" class="coming-soon">(coming soon)</span>
+      <span v-if="!provider.enabled" class="coming-soon">(próximamente)</span>
     </label>
   </fieldset>
 </template>
@@ -36,6 +36,8 @@ const providers = [
   align-items: center;
   border: none;
   padding: 0;
+  margin: 0;
+  color: var(--text);
 }
 
 .option {
@@ -52,6 +54,6 @@ const providers = [
 
 .coming-soon {
   font-size: 0.8em;
-  color: #888;
+  color: var(--text-muted);
 }
 </style>

@@ -36,6 +36,13 @@ function scheduleAfterDelay(fn) {
   return result;
 }
 
+const RETRYABLE_STATUSES = new Set([429, 502, 503, 504]);
+const MAX_RETRIES = 3;
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function queryMusicBrainz(artistName) {
   const userAgent = process.env.MUSICBRAINZ_USER_AGENT;
   if (!userAgent) {
@@ -46,17 +53,29 @@ async function queryMusicBrainz(artistName) {
   url.searchParams.set('query', `artist:${artistName}`);
   url.searchParams.set('fmt', 'json');
 
-  const response = await fetch(url, {
-    headers: { 'User-Agent': userAgent },
-  });
-  if (!response.ok) {
-    throw new Error(`MusicBrainz API error: ${response.status}`);
-  }
+  let lastError;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) await wait(RATE_LIMIT_MS * 2 ** attempt);
 
-  const data = await response.json();
-  const best = data.artists?.[0];
-  if (!best) return null;
-  return best.country || best.area?.name || null;
+    let response;
+    try {
+      response = await fetch(url, { headers: { 'User-Agent': userAgent } });
+    } catch (err) {
+      lastError = err;
+      continue;
+    }
+
+    if (response.ok) {
+      const data = await response.json();
+      const best = data.artists?.[0];
+      if (!best) return null;
+      return best.country || best.area?.name || null;
+    }
+
+    lastError = new Error(`MusicBrainz API error: ${response.status}`);
+    if (!RETRYABLE_STATUSES.has(response.status)) throw lastError;
+  }
+  throw lastError;
 }
 
 /**
