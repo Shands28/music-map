@@ -32,7 +32,7 @@ function addedAtLabel(addedAt) {
 const rows = computed(() =>
   props.tracks.map((track, index) => ({
     ...track,
-    rowId: track.sourceId || String(index),
+    rowId: `${index}-${track.sourceId || 'row'}`,
     countryLabel: countryName(track.country),
     addedAtLabel: addedAtLabel(track.addedAt),
     status: statusOf(track),
