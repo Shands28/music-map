@@ -9,6 +9,7 @@ const props = defineProps({
   countries: { type: Array, required: true }, // [{ country: 'US', count: 12 }]
 })
 
+const containerRef = ref(null)
 const svgRef = ref(null)
 const tooltip = ref({ visible: false, x: 0, y: 0, text: '' })
 
@@ -22,11 +23,11 @@ function alpha2ToNumericId(alpha2) {
 }
 
 function render() {
-  const container = svgRef.value
-  if (!container) return
+  const container = containerRef.value
+  if (!container || !svgRef.value) return
 
   const width = container.clientWidth || 800
-  const height = Math.min(width * 0.6, Math.max(window.innerHeight * 0.7, 480))
+  const height = container.clientHeight || 600
 
   const countsByNumericId = new Map()
   for (const { country, count } of props.countries) {
@@ -40,7 +41,7 @@ function render() {
   const projection = d3.geoNaturalEarth1().fitSize([width, height], { type: 'Sphere' })
   const path = d3.geoPath(projection)
 
-  const svg = d3.select(container)
+  const svg = d3.select(svgRef.value)
   svg.selectAll('*').remove()
   svg.attr('viewBox', `0 0 ${width} ${height}`).attr('width', '100%').attr('height', height)
 
@@ -110,7 +111,7 @@ watch(() => props.countries, render, { deep: true })
 </script>
 
 <template>
-  <div class="world-map">
+  <div class="world-map" ref="containerRef">
     <svg ref="svgRef"></svg>
     <div class="zoom-controls">
       <button type="button" @click="zoomBy(1.5)">+</button>
@@ -127,14 +128,18 @@ watch(() => props.countries, render, { deep: true })
 .world-map {
   position: relative;
   width: 100%;
+  height: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .world-map svg {
   display: block;
+  width: 100%;
+  height: 100%;
   cursor: grab;
 }
 

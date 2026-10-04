@@ -158,6 +158,9 @@ h1 {
   margin-left: calc(-50vw + 50%);
   padding: 1.5rem;
   box-sizing: border-box;
+  height: 80vh;
+  min-height: 560px;
+  max-height: 900px;
 }
 
 .summary {
