@@ -4,7 +4,10 @@ import iso from 'iso-3166-1'
 
 const props = defineProps({
   tracks: { type: Array, required: true }, // [{ title, artistName, country, sourceUrl, confidence, channelTitle }]
+  filterCountry: { type: String, default: null }, // alpha2
 })
+
+const emit = defineEmits(['clear-filter'])
 
 const flagged = reactive(new Set())
 const reasons = reactive({}) // rowId -> reason text
@@ -24,14 +27,27 @@ function statusOf(track) {
   return { label: 'OK', className: 'status-ok' }
 }
 
+function addedAtLabel(addedAt) {
+  if (!addedAt) return null
+  return new Date(addedAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 const rows = computed(() =>
   props.tracks.map((track, index) => ({
     ...track,
-    rowId: track.sourceId || String(index),
+    rowId: `${index}-${track.sourceId || 'row'}`,
     countryLabel: countryName(track.country),
+    addedAtLabel: addedAtLabel(track.addedAt),
     status: statusOf(track),
   })),
 )
+
+const filteredRows = computed(() => {
+  if (!props.filterCountry) return rows.value
+  return rows.value.filter((row) => row.country === props.filterCountry)
+})
+
+const filterCountryLabel = computed(() => countryName(props.filterCountry))
 
 function toggleFlag(rowId) {
   if (flagged.has(rowId)) {
@@ -42,7 +58,7 @@ function toggleFlag(rowId) {
   }
 }
 
-const flaggedRows = computed(() => rows.value.filter((row) => flagged.has(row.rowId)))
+const flaggedRows = computed(() => filteredRows.value.filter((row) => flagged.has(row.rowId)))
 
 function downloadJson(json) {
   const blob = new Blob([json], { type: 'application/json' })
@@ -93,7 +109,7 @@ async function confirmExport() {
 <template>
   <div class="track-list-wrapper">
     <div class="track-list-header">
-      <h2>Canciones ({{ rows.length }})</h2>
+      <h2>Canciones ({{ filteredRows.length }}<span v-if="filterCountry">&nbsp;/ {{ rows.length }}</span>)</h2>
       <button
         type="button"
         class="export-button"
@@ -106,9 +122,16 @@ async function confirmExport() {
         <span v-else>Exportar marcadas ({{ flagged.size }})</span>
       </button>
     </div>
+    <div v-if="filterCountry" class="filter-bar">
+      <span class="filter-chip">
+        Filtrado por: {{ filterCountryLabel }}
+        <button type="button" class="clear-filter" @click="emit('clear-filter')">✕ Borrar filtro</button>
+      </span>
+    </div>
     <p class="hint">
-      Marca con el checkbox cualquier fila que creas incorrecta. Al exportar podrás indicar el
-      motivo de cada una antes de copiarlas al portapapeles.
+      Marca con el checkbox cualquier fila que creas incorrecta. Haz click en un país del mapa para
+      filtrar esta tabla. Al exportar podrás indicar el motivo de cada canción marcada antes de
+      copiarlas al portapapeles.
     </p>
     <div class="track-list">
       <table>
@@ -118,11 +141,12 @@ async function confirmExport() {
             <th>Título</th>
             <th>Artista detectado</th>
             <th>País</th>
+            <th>Añadida</th>
             <th>Estado</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.rowId" :class="row.status.className">
+          <tr v-for="row in filteredRows" :key="row.rowId" :class="row.status.className">
             <td class="col-flag">
               <input
                 type="checkbox"
@@ -137,6 +161,7 @@ async function confirmExport() {
             </td>
             <td>{{ row.artistName || '—' }}</td>
             <td>{{ row.countryLabel || '—' }}</td>
+            <td>{{ row.addedAtLabel || '—' }}</td>
             <td><span class="badge" :class="row.status.className">{{ row.status.label }}</span></td>
           </tr>
         </tbody>
@@ -219,6 +244,37 @@ async function confirmExport() {
   color: var(--text-muted);
   font-size: 0.85rem;
   margin: 0.4rem 0 0.75rem;
+}
+
+.filter-bar {
+  margin-top: 0.5rem;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.2rem 0.3rem 0.2rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+.clear-filter {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.clear-filter:hover {
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .track-list {

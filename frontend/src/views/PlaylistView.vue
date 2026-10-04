@@ -1,14 +1,32 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import ProviderSelector from '../components/ProviderSelector.vue'
 import WorldMap from '../components/WorldMap.vue'
 import TrackList from '../components/TrackList.vue'
+import TimelineSlider from '../components/TimelineSlider.vue'
+import { aggregateByCountry } from '../utils/aggregate.js'
 
 const provider = ref('youtube')
 const playlistRef = ref('')
 const loading = ref(false)
 const error = ref(null)
 const result = ref(null)
+const sliderIndex = ref(0)
+const selectedCountry = ref(null)
+
+const timedTracks = computed(() => {
+  if (!result.value) return []
+  return result.value.tracks
+    .filter((track) => track.addedAt)
+    .slice()
+    .sort((a, b) => new Date(a.addedAt) - new Date(b.addedAt))
+})
+
+const mapCountries = computed(() => {
+  if (!result.value) return []
+  if (!timedTracks.value.length) return result.value.countries
+  return aggregateByCountry(timedTracks.value.slice(0, sliderIndex.value + 1))
+})
 
 async function submit() {
   if (!playlistRef.value.trim()) return
@@ -16,6 +34,7 @@ async function submit() {
   loading.value = true
   error.value = null
   result.value = null
+  selectedCountry.value = null
 
   try {
     const url = `/api/playlist/countries?provider=${encodeURIComponent(provider.value)}&ref=${encodeURIComponent(playlistRef.value)}`
@@ -61,17 +80,26 @@ async function submit() {
     </section>
 
     <section v-if="result" class="map-section">
-      <WorldMap :countries="result.countries" />
+      <WorldMap
+        :countries="mapCountries"
+        :selected-country="selectedCountry"
+        @country-click="selectedCountry = selectedCountry === $event ? null : $event"
+      />
     </section>
 
     <section v-if="result" class="results">
+      <TimelineSlider :tracks="timedTracks" @update:index="sliderIndex = $event" />
       <p class="summary">
         {{ result.total - result.unidentified }} de {{ result.total }} canciones ubicadas en el mapa.
         <span v-if="result.unidentified > 0">
           {{ result.unidentified }} canción(es) no se pudieron identificar o no tienen país conocido.
         </span>
       </p>
-      <TrackList :tracks="result.tracks" />
+      <TrackList
+        :tracks="result.tracks"
+        :filter-country="selectedCountry"
+        @clear-filter="selectedCountry = null"
+      />
     </section>
   </main>
 </template>
@@ -158,6 +186,9 @@ h1 {
   margin-left: calc(-50vw + 50%);
   padding: 1.5rem;
   box-sizing: border-box;
+  height: 80vh;
+  min-height: 560px;
+  max-height: 900px;
 }
 
 .summary {

@@ -7,8 +7,12 @@ import iso from 'iso-3166-1'
 
 const props = defineProps({
   countries: { type: Array, required: true }, // [{ country: 'US', count: 12 }]
+  selectedCountry: { type: String, default: null }, // alpha2
 })
 
+const emit = defineEmits(['country-click'])
+
+const containerRef = ref(null)
 const svgRef = ref(null)
 const tooltip = ref({ visible: false, x: 0, y: 0, text: '' })
 
@@ -21,12 +25,17 @@ function alpha2ToNumericId(alpha2) {
   return entry ? entry.numeric : null
 }
 
+function numericIdToAlpha2(numericId) {
+  const entry = iso.whereNumeric(numericId)
+  return entry ? entry.alpha2 : null
+}
+
 function render() {
-  const container = svgRef.value
-  if (!container) return
+  const container = containerRef.value
+  if (!container || !svgRef.value) return
 
   const width = container.clientWidth || 800
-  const height = Math.min(width * 0.6, Math.max(window.innerHeight * 0.7, 480))
+  const height = container.clientHeight || 600
 
   const countsByNumericId = new Map()
   for (const { country, count } of props.countries) {
@@ -40,7 +49,7 @@ function render() {
   const projection = d3.geoNaturalEarth1().fitSize([width, height], { type: 'Sphere' })
   const path = d3.geoPath(projection)
 
-  const svg = d3.select(container)
+  const svg = d3.select(svgRef.value)
   svg.selectAll('*').remove()
   svg.attr('viewBox', `0 0 ${width} ${height}`).attr('width', '100%').attr('height', height)
 
@@ -51,6 +60,8 @@ function render() {
     .attr('d', path({ type: 'Sphere' }))
     .attr('fill', '#eef2ff')
 
+  const selectedNumericId = props.selectedCountry ? alpha2ToNumericId(props.selectedCountry) : null
+
   g.selectAll('path.country')
     .data(worldFeatures)
     .join('path')
@@ -60,8 +71,8 @@ function render() {
       const count = countsByNumericId.get(d.id)
       return count ? colorScale(count) : '#d8dce3'
     })
-    .attr('stroke', '#ffffff')
-    .attr('stroke-width', 0.5)
+    .attr('stroke', (d) => (d.id === selectedNumericId ? '#1d1f8c' : '#ffffff'))
+    .attr('stroke-width', (d) => (d.id === selectedNumericId ? 2 : 0.5))
     .on('mousemove', (event, d) => {
       const count = countsByNumericId.get(d.id) || 0
       tooltip.value = {
@@ -73,6 +84,10 @@ function render() {
     })
     .on('mouseleave', () => {
       tooltip.value.visible = false
+    })
+    .on('click', (event, d) => {
+      const alpha2 = numericIdToAlpha2(d.id)
+      if (alpha2) emit('country-click', alpha2)
     })
 
   zoomBehavior = d3
@@ -107,10 +122,11 @@ onMounted(() => {
 })
 onUnmounted(() => window.removeEventListener('resize', handleResize))
 watch(() => props.countries, render, { deep: true })
+watch(() => props.selectedCountry, render)
 </script>
 
 <template>
-  <div class="world-map">
+  <div class="world-map" ref="containerRef">
     <svg ref="svgRef"></svg>
     <div class="zoom-controls">
       <button type="button" @click="zoomBy(1.5)">+</button>
@@ -127,15 +143,23 @@ watch(() => props.countries, render, { deep: true })
 .world-map {
   position: relative;
   width: 100%;
+  height: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .world-map svg {
   display: block;
+  width: 100%;
+  height: 100%;
   cursor: grab;
+}
+
+.world-map svg :deep(.country) {
+  cursor: pointer;
 }
 
 .zoom-controls {

@@ -135,6 +135,7 @@ export default {
           sourceUrl: videoId ? `https://www.youtube.com/watch?v=${videoId}` : null,
           confidence,
           channelTitle,
+          addedAt: snippet.publishedAt || null,
         });
       }
       pageToken = page.nextPageToken;
