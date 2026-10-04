@@ -7,7 +7,10 @@ import iso from 'iso-3166-1'
 
 const props = defineProps({
   countries: { type: Array, required: true }, // [{ country: 'US', count: 12 }]
+  selectedCountry: { type: String, default: null }, // alpha2
 })
+
+const emit = defineEmits(['country-click'])
 
 const containerRef = ref(null)
 const svgRef = ref(null)
@@ -20,6 +23,11 @@ let zoomBehavior = null
 function alpha2ToNumericId(alpha2) {
   const entry = iso.whereAlpha2(alpha2)
   return entry ? entry.numeric : null
+}
+
+function numericIdToAlpha2(numericId) {
+  const entry = iso.whereNumeric(numericId)
+  return entry ? entry.alpha2 : null
 }
 
 function render() {
@@ -52,6 +60,8 @@ function render() {
     .attr('d', path({ type: 'Sphere' }))
     .attr('fill', '#eef2ff')
 
+  const selectedNumericId = props.selectedCountry ? alpha2ToNumericId(props.selectedCountry) : null
+
   g.selectAll('path.country')
     .data(worldFeatures)
     .join('path')
@@ -61,8 +71,8 @@ function render() {
       const count = countsByNumericId.get(d.id)
       return count ? colorScale(count) : '#d8dce3'
     })
-    .attr('stroke', '#ffffff')
-    .attr('stroke-width', 0.5)
+    .attr('stroke', (d) => (d.id === selectedNumericId ? '#1d1f8c' : '#ffffff'))
+    .attr('stroke-width', (d) => (d.id === selectedNumericId ? 2 : 0.5))
     .on('mousemove', (event, d) => {
       const count = countsByNumericId.get(d.id) || 0
       tooltip.value = {
@@ -74,6 +84,10 @@ function render() {
     })
     .on('mouseleave', () => {
       tooltip.value.visible = false
+    })
+    .on('click', (event, d) => {
+      const alpha2 = numericIdToAlpha2(d.id)
+      if (alpha2) emit('country-click', alpha2)
     })
 
   zoomBehavior = d3
@@ -108,6 +122,7 @@ onMounted(() => {
 })
 onUnmounted(() => window.removeEventListener('resize', handleResize))
 watch(() => props.countries, render, { deep: true })
+watch(() => props.selectedCountry, render)
 </script>
 
 <template>
@@ -141,6 +156,10 @@ watch(() => props.countries, render, { deep: true })
   width: 100%;
   height: 100%;
   cursor: grab;
+}
+
+.world-map svg :deep(.country) {
+  cursor: pointer;
 }
 
 .zoom-controls {

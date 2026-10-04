@@ -12,6 +12,7 @@ const loading = ref(false)
 const error = ref(null)
 const result = ref(null)
 const sliderIndex = ref(0)
+const selectedCountry = ref(null)
 
 const timedTracks = computed(() => {
   if (!result.value) return []
@@ -33,6 +34,7 @@ async function submit() {
   loading.value = true
   error.value = null
   result.value = null
+  selectedCountry.value = null
 
   try {
     const url = `/api/playlist/countries?provider=${encodeURIComponent(provider.value)}&ref=${encodeURIComponent(playlistRef.value)}`
@@ -78,7 +80,11 @@ async function submit() {
     </section>
 
     <section v-if="result" class="map-section">
-      <WorldMap :countries="mapCountries" />
+      <WorldMap
+        :countries="mapCountries"
+        :selected-country="selectedCountry"
+        @country-click="selectedCountry = selectedCountry === $event ? null : $event"
+      />
     </section>
 
     <section v-if="result" class="results">
@@ -89,7 +95,11 @@ async function submit() {
           {{ result.unidentified }} canción(es) no se pudieron identificar o no tienen país conocido.
         </span>
       </p>
-      <TrackList :tracks="result.tracks" />
+      <TrackList
+        :tracks="result.tracks"
+        :filter-country="selectedCountry"
+        @clear-filter="selectedCountry = null"
+      />
     </section>
   </main>
 </template>
