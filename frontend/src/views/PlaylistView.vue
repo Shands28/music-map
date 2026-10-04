@@ -1,14 +1,31 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import ProviderSelector from '../components/ProviderSelector.vue'
 import WorldMap from '../components/WorldMap.vue'
 import TrackList from '../components/TrackList.vue'
+import TimelineSlider from '../components/TimelineSlider.vue'
+import { aggregateByCountry } from '../utils/aggregate.js'
 
 const provider = ref('youtube')
 const playlistRef = ref('')
 const loading = ref(false)
 const error = ref(null)
 const result = ref(null)
+const sliderIndex = ref(0)
+
+const timedTracks = computed(() => {
+  if (!result.value) return []
+  return result.value.tracks
+    .filter((track) => track.addedAt)
+    .slice()
+    .sort((a, b) => new Date(a.addedAt) - new Date(b.addedAt))
+})
+
+const mapCountries = computed(() => {
+  if (!result.value) return []
+  if (!timedTracks.value.length) return result.value.countries
+  return aggregateByCountry(timedTracks.value.slice(0, sliderIndex.value + 1))
+})
 
 async function submit() {
   if (!playlistRef.value.trim()) return
@@ -61,10 +78,11 @@ async function submit() {
     </section>
 
     <section v-if="result" class="map-section">
-      <WorldMap :countries="result.countries" />
+      <WorldMap :countries="mapCountries" />
     </section>
 
     <section v-if="result" class="results">
+      <TimelineSlider :tracks="timedTracks" @update:index="sliderIndex = $event" />
       <p class="summary">
         {{ result.total - result.unidentified }} de {{ result.total }} canciones ubicadas en el mapa.
         <span v-if="result.unidentified > 0">

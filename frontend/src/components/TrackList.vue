@@ -21,11 +21,17 @@ function statusOf(track) {
   return { label: 'OK', className: 'status-ok' }
 }
 
+function addedAtLabel(addedAt) {
+  if (!addedAt) return null
+  return new Date(addedAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 const rows = computed(() =>
   props.tracks.map((track, index) => ({
     ...track,
     rowId: track.sourceId || String(index),
     countryLabel: countryName(track.country),
+    addedAtLabel: addedAtLabel(track.addedAt),
     status: statusOf(track),
   })),
 )
@@ -79,6 +85,7 @@ function exportReview() {
             <th>Título</th>
             <th>Artista detectado</th>
             <th>País</th>
+            <th>Añadida</th>
             <th>Estado</th>
           </tr>
         </thead>
@@ -98,6 +105,7 @@ function exportReview() {
             </td>
             <td>{{ row.artistName || '—' }}</td>
             <td>{{ row.countryLabel || '—' }}</td>
+            <td>{{ row.addedAtLabel || '—' }}</td>
             <td><span class="badge" :class="row.status.className">{{ row.status.label }}</span></td>
           </tr>
         </tbody>
