@@ -42,6 +42,14 @@ test('falls back to the channel name when no pattern matches', () => {
   assert.deepEqual(result, { artistName: 'Some Random Channel', confidence: 'low' });
 });
 
+test('strips a [M/V] tag before matching the dash pattern', () => {
+  const result = parseArtistFromVideo({
+    videoTitle: '[M/V] BIBI - Some Song',
+    channelTitle: 'Some Label',
+  });
+  assert.deepEqual(result, { artistName: 'BIBI', confidence: 'high' });
+});
+
 test('returns null artistName when there is nothing usable', () => {
   const result = parseArtistFromVideo({ videoTitle: '', channelTitle: '' });
   assert.deepEqual(result, { artistName: null, confidence: 'low' });

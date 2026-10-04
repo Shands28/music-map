@@ -69,7 +69,11 @@ async function queryMusicBrainz(artistName) {
       const data = await response.json();
       const best = data.artists?.[0];
       if (!best) return null;
-      return best.country || best.area?.name || null;
+      // Only fall back to `area` when it is itself a country (has an ISO
+      // code). Otherwise `area` can be a city or region (e.g. "Berlin",
+      // "Boston"), which is not a valid key for the per-country map.
+      const areaIsoCode = best.area?.['iso-3166-1-codes']?.[0];
+      return best.country || areaIsoCode || null;
     }
 
     lastError = new Error(`MusicBrainz API error: ${response.status}`);

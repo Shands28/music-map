@@ -17,6 +17,8 @@ const NOISE_PATTERNS = [
   /\[4k\]/gi,
   /\(visualizer\)/gi,
   /\[visualizer\]/gi,
+  /\(m\/v\)/gi,
+  /\[m\/v\]/gi,
 ];
 
 function cleanNoise(text) {
