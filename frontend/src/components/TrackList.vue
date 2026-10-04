@@ -401,7 +401,9 @@ tbody tr:hover {
 }
 
 .modal-row textarea {
+  box-sizing: border-box;
   width: 100%;
+  min-width: 0;
   resize: vertical;
   font-family: inherit;
   font-size: 0.85rem;
