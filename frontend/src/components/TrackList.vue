@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import iso from 'iso-3166-1'
 
 const props = defineProps({
@@ -7,6 +7,7 @@ const props = defineProps({
 })
 
 const flagged = reactive(new Set())
+const copyState = ref('idle') // 'idle' | 'copied' | 'error'
 
 function countryName(alpha2) {
   if (!alpha2) return null
@@ -35,7 +36,17 @@ function toggleFlag(rowId) {
   else flagged.add(rowId)
 }
 
-function exportReview() {
+function downloadJson(json) {
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'tracks-para-revisar.json'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+async function exportReview() {
   const entries = rows.value
     .filter((row) => row.status.className !== 'status-ok' || flagged.has(row.rowId))
     .map((row) => ({
@@ -49,13 +60,17 @@ function exportReview() {
       sourceUrl: row.sourceUrl,
     }))
 
-  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'tracks-para-revisar.json'
-  link.click()
-  URL.revokeObjectURL(url)
+  const json = JSON.stringify(entries, null, 2)
+
+  try {
+    await navigator.clipboard.writeText(json)
+    copyState.value = 'copied'
+  } catch {
+    // Clipboard API unavailable (e.g. insecure context) — fall back to a file download.
+    downloadJson(json)
+    copyState.value = 'error'
+  }
+  setTimeout(() => (copyState.value = 'idle'), 2000)
 }
 </script>
 
@@ -64,12 +79,14 @@ function exportReview() {
     <div class="track-list-header">
       <h2>Canciones ({{ rows.length }})</h2>
       <button type="button" class="export-button" @click="exportReview">
-        Exportar para revisar
+        <span v-if="copyState === 'copied'">Copiado al portapapeles ✓</span>
+        <span v-else-if="copyState === 'error'">Portapapeles no disponible, descargado</span>
+        <span v-else>Copiar para revisar</span>
       </button>
     </div>
     <p class="hint">
-      Marca con el checkbox cualquier fila que creas incorrecta (aunque diga "OK"). Al exportar se
-      incluyen las marcadas a mano y todas las que no quedaron en estado OK.
+      Marca con el checkbox cualquier fila que creas incorrecta (aunque diga "OK"). Al copiar se
+      incluyen las marcadas a mano y todas las que no quedaron en estado OK, listo para pegarlo.
     </p>
     <div class="track-list">
       <table>
